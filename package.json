@@ -1,6 +1,6 @@
 {
   "name": "dsh-skill-mini-manager",
-  "description": "Minimal skill manager for DeepSeek Harness Web: one Settings page in the same sidebar row as Plugins that lists every installed skill with its summary, source and disk footprint, and removes any of them (removal moves the bundle to a recoverable trash). skill极简管理：与「插件」同级的一页设置，列出当前 DSH 装的全部 skill 及其简介、来源与占用，并可逐个移除（移除是移入可恢复的回收站）。",
+  "description": "Minimal skill manager for DSH Web: a Settings page beside Plugins that lists every installed skill with its summary, source and size, and removes any of them (recoverable trash). skill极简管理：与「插件」同级的一页，列出全部 skill 及简介并可逐个移除。",
   "version": "2.0.1",
   "type": "module",
   "main": "lib/index.js",

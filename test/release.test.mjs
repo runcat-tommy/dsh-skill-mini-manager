@@ -128,6 +128,16 @@ test('the READMEs document all three install routes and the mandatory restart', 
   assert.equal(manifest.name, 'dsh-skill-mini-manager')
 })
 
+test('the description fits the registry limit and leads in English', () => {
+  // The registry hard-cuts `description` at 255 characters, mid-word, and keeps
+  // the full text in the tarball. That silent mismatch is visible only on the
+  // npm page, so it is pinned here instead of discovered after a release.
+  assert.ok(manifest.description.length <= 255, `description is ${manifest.description.length} chars, over the 255 limit`)
+  // English first, Chinese appended: the npm page renders README.md's language.
+  assert.match(manifest.description, /^[\x20-\x7e]+/, 'the description must open in English')
+  assert.match(manifest.description, /[^\x00-\x7f]/, 'the Chinese half must survive alongside it')
+})
+
 test('no lifecycle script that would force a build approval on the GitHub route', () => {
   for (const script of ['preinstall', 'install', 'postinstall', 'prepare']) {
     assert.equal(
