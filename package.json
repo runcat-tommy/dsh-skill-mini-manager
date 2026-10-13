@@ -1,0 +1,66 @@
+{
+  "name": "dsh-skill-mini-manager",
+  "description": "Minimal skill manager for DeepSeek Harness Web: one Settings page in the same sidebar row as Plugins that lists every installed skill with its summary, source and disk footprint, and removes any of them (removal moves the bundle to a recoverable trash). skill极简管理：与「插件」同级的一页设置，列出当前 DSH 装的全部 skill 及其简介、来源与占用，并可逐个移除（移除是移入可恢复的回收站）。",
+  "version": "1.0.1",
+  "type": "module",
+  "main": "lib/index.js",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "skill",
+    "skills",
+    "skill-manager",
+    "skill-mini-manager"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/runcat-tommy/dsh-skill-mini-manager.git"
+  },
+  "homepage": "https://github.com/runcat-tommy/dsh-skill-mini-manager#readme",
+  "bugs": {
+    "url": "https://github.com/runcat-tommy/dsh-skill-mini-manager/issues"
+  },
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./catalog": {
+      "default": "./lib/catalog.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    },
+    "marketplace": {
+      "profiles": ["web"],
+      "requiresBuildApproval": false,
+      "requiresRestart": true,
+      "manualSteps": false
+    }
+  },
+  "files": [
+    "cordis.patch.yml",
+    "lib",
+    "CHANGELOG.md",
+    "README.md",
+    "README.en.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}

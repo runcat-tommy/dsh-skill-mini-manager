@@ -1,0 +1,11 @@
+# dsh-skill-mini-manager bundle patch: contributes one profile row.
+#
+# The node half (lib/index.js) mounts the plugin's read/remove HTTP routes on
+# the host `webServer` service; the browser half ships via exports["./client"]
+# and the package.json `dsh.client` declaration, where it registers one
+# `settings.section` entry — the same level as the built-in 插件 (Plugins)
+# section.
+
+- insert:
+    - id: dsh-skill-mini-manager
+      name: 'dsh-skill-mini-manager'
