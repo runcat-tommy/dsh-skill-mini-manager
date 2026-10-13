@@ -56,7 +56,10 @@
   "files": [
     "cordis.patch.yml",
     "lib",
+    "assets",
+    "screenshots.json",
     "CHANGELOG.md",
+    "LICENSE",
     "README.md",
     "README.en.md"
   ],

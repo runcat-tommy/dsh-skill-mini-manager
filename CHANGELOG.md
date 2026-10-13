@@ -25,6 +25,10 @@
 - 首次发布到 GitHub：<https://github.com/runcat-tommy/dsh-skill-mini-manager>
 - `package.json` 补上 `repository` / `homepage` / `bugs`。
 - README 安装章节补上「从 GitHub 直接装」与「从本地目录装」两条路（含更新与卸载）。
+- 新增 `screenshots.json` 与 `assets/preview-zh.jpg` / `assets/preview-en.jpg` 两张 UI 预览图。
+  `screenshots.json` 是市场详情页预览图的**确定性来源**——不声明就只能回退到从 README 抽图，
+  而那套启发式会丢掉 svg、只认 4 个 GitHub 图床、还要求语义分 ≥ 20，实测全市场只有 18% 的条目有预览。
+  两份 README 各放**与本文件语言一致**的那一张，`screenshots.json` 则两张都留（市场不分语言）。
 
 ## 1.0.0
 
