@@ -162,7 +162,7 @@ a *skill* is a different thing; this plugin never touches package dependencies.)
 | `lib/index.js` | host half: the four routes, the trash, every refusal rule |
 | `lib/catalog.js` | the pure core: home/root resolution, `planRemoval`, trash-name validation |
 | `lib/client.js` | browser half: a hand-written `__ModuleLoader__` bundle registering the `settings.section` |
-| `test/` | 42 tests: pure rules, host half over real temp directories, browser-half structure |
+| `test/` | 51 tests: pure rules, host half over real temp directories (including the layered read), browser-half structure |
 | `scripts/inspect-live-catalog.mjs` | read-only probe: run the catalog and removal planning over the skills actually installed here |
 
 The browser half needs no build step: it requires only the `react` platform seed
@@ -172,7 +172,7 @@ bilingually through the `locale` service and follows the DSH UI language.
 ## Developing
 
 ```bash
-node --test "test/*.test.mjs"          # all 42 tests
+node --test "test/*.test.mjs"          # all 51 tests
 node scripts/inspect-live-catalog.mjs  # read-only check against the real installed skills
 ```
 

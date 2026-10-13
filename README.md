@@ -144,7 +144,7 @@ dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 | `lib/index.js` | 宿主半侧：四条 HTTP 路由、回收站、全部拒绝规则 |
 | `lib/catalog.js` | 纯函数核心：根目录解析、`planRemoval`、回收站命名校验 |
 | `lib/client.js` | 浏览器半侧：手写的 `__ModuleLoader__` bundle，注册 `settings.section` |
-| `test/` | 42 个测试：纯规则、宿主半侧（真实临时目录）、浏览器半侧结构 |
+| `test/` | 51 个测试：纯规则、宿主半侧（真实临时目录 + 分层读取）、浏览器半侧结构 |
 | `scripts/inspect-live-catalog.mjs` | 只读探针：用本机已装的 skill 跑一遍目录读取与移除规划 |
 
 浏览器半侧不需要构建步骤：它只 `require("react")` 这一颗平台种子，其余全部用
@@ -153,7 +153,7 @@ dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ## 开发
 
 ```bash
-node --test "test/*.test.mjs"          # 全部 42 个测试
+node --test "test/*.test.mjs"          # 全部 51 个测试
 node scripts/inspect-live-catalog.mjs  # 用本机真实 skill 做只读验证
 ```
 

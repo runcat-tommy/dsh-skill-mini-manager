@@ -18,6 +18,13 @@
   而不是静默地少列几个 skill；roster 完全不可用时退化为只读全局层。
 - 新增拒绝原因 `ambiguous`：同名 skill 在不同预设层里指向不同文件时，页面列出它但不提供移除
   （浏览器只发名称，没有唯一目标就不猜）。
+- 测试从 42 个增至 **51 个**，新增的 9 个是针对上面这个「空目录」bug 的回归测试。
+
+### 发布
+
+- 首次发布到 GitHub：<https://github.com/runcat-tommy/dsh-skill-mini-manager>
+- `package.json` 补上 `repository` / `homepage` / `bugs`。
+- README 安装章节补上「从 GitHub 直接装」与「从本地目录装」两条路（含更新与卸载）。
 
 ## 1.0.0
 
