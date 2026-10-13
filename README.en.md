@@ -114,25 +114,48 @@ same-origin requests only (an `Origin` that disagrees with `Host` is a 403):
 
 ## Installing
 
-This is a standard DSH bundle (it declares `dsh.bundle.patch` and `dsh.client`):
-add it to a profile and **restart**.
+This is a standard DSH bundle (it declares `dsh.bundle.patch` and `dsh.client`).
+Pick any one of three routes; **all three need one `dsh web` restart** afterwards.
 
-### Straight from GitHub
+**One thing to know up front**: this plugin has **no build step** — the browser half
+`lib/client.js` is a hand-written `__ModuleLoader__` bundle that is **committed to
+the repository**, and `package.json` declares no `prepare` script. So no route needs
+a build first, and a GitHub-source install does not normally trigger a build approval.
+
+| Route | Command | Needs | Updating |
+|---|---|---|---|
+| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | nothing (the tarball carries every artifact) | `dsh plugin --profile web up dsh-skill-mini-manager` |
+| ② GitHub source | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | `git` on the machine; approve the build if DSH asks | re-run the same command |
+| ③ Local checkout | `git clone …` then `dsh plugin --profile web add <path>` | nothing | `git pull` + restart (**no** rebuild) |
+
+### ① From npm (recommended)
+
+```bash
+dsh plugin --profile web add dsh-skill-mini-manager
+```
+
+The tarball carries every artifact, runs no install script, and needs no `git`.
+This is the fastest route.
+
+### ② Straight from GitHub
 
 ```bash
 dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager
 ```
 
-This needs `git` on the machine. The repository ships **no build artifacts and no
-`prepare` script**, so a build approval is not normally triggered; approve it if
-DSH asks. Updating means re-running the same command.
+This needs `git` on the machine. The repository ships **no build artifacts to
+generate and no `prepare` script**, so a build approval is not normally triggered;
+approve it if DSH asks. Updating means re-running the same command.
 
-### From a local checkout
+### ③ From a local checkout
 
 ```bash
 git clone https://github.com/runcat-tommy/dsh-skill-mini-manager.git
 dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ```
+
+For editing the code or working offline. Update with `git pull` and a restart —
+there is **no** `npm run build` step to run, because the plugin has nothing to build.
 
 `dsh plugin` is a forwarding shell around `pnpm`: it runs `pnpm add` inside the
 profile directory, then realigns `dsh.profile.bundles` with what actually got
@@ -150,14 +173,20 @@ will not:
 }
 ```
 
-Update with `git pull` and a re-run of `add`.
+### The restart is not optional
 
-**Either route needs one `dsh web` restart**: the host half mounts its routes at
-startup. A mere page refresh makes the page say so explicitly ("the plugin's host
-half did not answer").
+The host half mounts its routes at startup. A mere page refresh makes the page say
+so explicitly ("the plugin's host half did not answer") rather than rendering blank.
 
-Uninstall with `dsh plugin --profile web remove dsh-skill-mini-manager`. (Removing
-a *skill* is a different thing; this plugin never touches package dependencies.)
+Inspect and uninstall:
+
+```bash
+dsh plugin --profile web list
+dsh plugin --profile web remove dsh-skill-mini-manager
+```
+
+(Removing a *skill* is a different thing — this plugin never touches package
+dependencies.)
 
 ## What ships
 
@@ -166,7 +195,7 @@ a *skill* is a different thing; this plugin never touches package dependencies.)
 | `lib/index.js` | host half: the four routes, the trash, every refusal rule |
 | `lib/catalog.js` | the pure core: home/root resolution, `planRemoval`, trash-name validation |
 | `lib/client.js` | browser half: a hand-written `__ModuleLoader__` bundle registering the `settings.section` |
-| `test/` | 61 tests: pure rules, host half over real temp directories (including the layered read), browser-half structure, release-artifact gates |
+| `test/` | 62 tests: pure rules, host half over real temp directories (including the layered read), browser-half structure, release-artifact gates |
 | `scripts/inspect-live-catalog.mjs` | read-only probe: run the catalog and removal planning over the skills actually installed here |
 
 The browser half needs no build step: it requires only the `react` platform seed
@@ -176,7 +205,7 @@ bilingually through the `locale` service and follows the DSH UI language.
 ## Developing
 
 ```bash
-node --test "test/*.test.mjs"          # all 61 tests
+node --test "test/*.test.mjs"          # all 62 tests
 node scripts/inspect-live-catalog.mjs  # read-only check against the real installed skills
 ```
 

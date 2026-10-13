@@ -108,6 +108,26 @@ test('the READMEs document the GitHub install route a market looks for', () => {
   }
 })
 
+test('the READMEs document all three install routes and the mandatory restart', () => {
+  // The three routes differ in build approval and in how they update, so a
+  // one-command install section is not enough: dropping any of them is how a
+  // reader ends up running a build that does not exist, or assuming a refresh
+  // is enough. The npm route in particular disappears if a release forgets it.
+  const routes = [
+    `dsh plugin --profile web add ${manifest.name}`, // ① npm
+    `dsh plugin --profile web add github:runcat-tommy/${manifest.name}`, // ② GitHub source
+    'git clone https://github.com/runcat-tommy/', // ③ local checkout
+  ]
+  for (const file of ['README.md', 'README.en.md']) {
+    const text = read(file)
+    for (const route of routes) assert.ok(text.includes(route), `${file} is missing the install route "${route}"`)
+    assert.ok(text.includes('remove'), `${file} must document uninstalling`)
+    assert.match(text, /重启|restart/i, `${file} must warn that a restart is required`)
+  }
+  // Publishing to npm is what makes route ① real; the packument must exist for it.
+  assert.equal(manifest.name, 'dsh-skill-mini-manager')
+})
+
 test('no lifecycle script that would force a build approval on the GitHub route', () => {
   for (const script of ['preinstall', 'install', 'postinstall', 'prepare']) {
     assert.equal(

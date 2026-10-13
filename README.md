@@ -100,24 +100,45 @@ DSH 的 skill 注册表是 **host + 按 scope 分层**的：部署级 provider �
 
 ## 安装
 
-本插件是一个标准的 DSH bundle（声明了 `dsh.bundle.patch` 与 `dsh.client`），
-把包装进 profile 并**重启**即可。
+本插件是一个标准的 DSH bundle（声明了 `dsh.bundle.patch` 与 `dsh.client`）。
+三条路任选一条，装完都要**重启一次** `dsh web`。
 
-### 从 GitHub 直接装
+**先说清楚一件事**：本插件**没有构建步骤**——浏览器半侧 `lib/client.js` 是手写的
+`__ModuleLoader__` bundle，而且**已经提交进仓库**，`package.json` 里也没有 `prepare` 脚本。
+所以三条路都不需要「先构建」，GitHub 直装通常也不会触发构建审批。
+
+| 路 | 命令 | 需要什么 | 更新方式 |
+|---|---|---|---|
+| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | 无（包内已带全部产物） | `dsh plugin --profile web up dsh-skill-mini-manager` |
+| ② GitHub 直装 | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | 本机有 `git`；若 DSH 要求构建审批就同意 | 重跑同一条命令 |
+| ③ 下载到本地 | `git clone …` 后 `dsh plugin --profile web add <本地路径>` | 无 | `git pull` + 重启（**不需要**重新构建） |
+
+### ① 从 npm 装（推荐）
+
+```bash
+dsh plugin --profile web add dsh-skill-mini-manager
+```
+
+包内已带全部产物，不执行任何安装脚本，也不需要 `git`。这就是最快的一条路。
+
+### ② 从 GitHub 直接装
 
 ```bash
 dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager
 ```
 
-需要本机有 `git`。仓库**没有提交构建产物、也没有 `prepare` 脚本**，所以通常不会触发构建审批；
+需要本机有 `git`。仓库没有提交构建产物、也没有 `prepare` 脚本，所以通常不会触发构建审批；
 若 DSH 要求批准，按提示同意即可。更新就是重跑同一条命令。
 
-### 从本地目录装
+### ③ 下载到本地再装
 
 ```bash
 git clone https://github.com/runcat-tommy/dsh-skill-mini-manager.git
 dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ```
+
+适合要改代码或离线使用的情况。更新走 `git pull` 然后重启——本插件没有构建步骤，
+**不需要**跑 `npm run build`。
 
 `dsh plugin` 是 `pnpm` 的转发壳：它会在 profile 目录里跑 `pnpm add`，然后按装载后的真实状态
 对齐 `dsh.profile.bundles`。所以也可以用 `pnpm add link:<路径>` 手工挂载，此时需要自己把包名
@@ -133,13 +154,19 @@ dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 }
 ```
 
-更新走 `git pull` 后重跑 `add`。
+### 装完必须重启
 
-**三条路都必须重启一次 `dsh web`**：宿主半侧在启动时挂载路由。只刷新页面的话，
-页面会明确提示「插件的主机半侧没有响应」。
+宿主半侧在启动时挂载路由。只刷新页面的话，页面会明确提示「插件的主机半侧没有响应」，
+而不是静默空白。
 
-卸载用 `dsh plugin --profile web remove dsh-skill-mini-manager`（移除 skill 是另一回事，
-本插件不会碰包依赖）。
+查看与卸载：
+
+```bash
+dsh plugin --profile web list
+dsh plugin --profile web remove dsh-skill-mini-manager
+```
+
+（移除 skill 是另一回事——本插件不会碰包依赖。）
 
 ## 装箱内容
 
@@ -148,7 +175,7 @@ dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 | `lib/index.js` | 宿主半侧：四条 HTTP 路由、回收站、全部拒绝规则 |
 | `lib/catalog.js` | 纯函数核心：根目录解析、`planRemoval`、回收站命名校验 |
 | `lib/client.js` | 浏览器半侧：手写的 `__ModuleLoader__` bundle，注册 `settings.section` |
-| `test/` | 61 个测试：纯规则、宿主半侧（真实临时目录 + 分层读取）、浏览器半侧结构、发布产物门槛 |
+| `test/` | 62 个测试：纯规则、宿主半侧（真实临时目录 + 分层读取）、浏览器半侧结构、发布产物门槛 |
 | `scripts/inspect-live-catalog.mjs` | 只读探针：用本机已装的 skill 跑一遍目录读取与移除规划 |
 
 浏览器半侧不需要构建步骤：它只 `require("react")` 这一颗平台种子，其余全部用
@@ -157,7 +184,7 @@ dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ## 开发
 
 ```bash
-node --test "test/*.test.mjs"          # 全部 61 个测试
+node --test "test/*.test.mjs"          # 全部 62 个测试
 node scripts/inspect-live-catalog.mjs  # 用本机真实 skill 做只读验证
 ```
 

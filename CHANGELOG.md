@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 2.0.1
+
+**首个发布到 npm 的版本。** `1.0.x` 只在 GitHub 上存在过，从未发布到 npmjs，
+所以这是 npm 上的 0 号版本；版本号直接落在 `2.0.1` 是刻意的选择，不代表存在破坏性变更。
+
+### 发布
+
+- 发布到 npmjs：<https://www.npmjs.com/package/dsh-skill-mini-manager>
+- README 安装章节按三条路写全（GitHub 直装 / 下载到本地 / npm），并附对照表：
+  三条路的**构建审批**与**更新方式**不同，只给一条命令会让人踩坑。
+- npm 页面渲染英文 `README`（本包首次发布，沿用本仓库多数插件与最近两次发布的约定）。
+
+### 说明
+
+- 本插件**没有构建步骤**：`lib/client.js` 是手写的 `__ModuleLoader__` bundle 且已提交进仓库，
+  `package.json` 里也没有 `prepare` 脚本。所以三条路都不需要「先构建」，
+  GitHub 直装通常也不会触发构建审批。
+
 ## 1.0.1
 
 ### 修复
