@@ -1,4 +1,4 @@
-﻿# dsh-skill-mini-manager · skill 极简管理
+# dsh-skill-mini-manager · skill 极简管理
 
 [English](README.en.md) | 中文
 
@@ -107,11 +107,13 @@ DSH 的 skill 注册表是 **host + 按 scope 分层**的：部署级 provider �
 `__ModuleLoader__` bundle，而且**已经提交进仓库**，`package.json` 里也没有 `prepare` 脚本。
 所以三条路都不需要「先构建」，GitHub 直装通常也不会触发构建审批。
 
-| 路 | 命令 | 需要什么 | 更新方式 |
-|---|---|---|---|
-| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | 无（包内已带全部产物） | `dsh plugin --profile web up dsh-skill-mini-manager` |
-| ② GitHub 直装 | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | 本机有 `git`；若 DSH 要求构建审批就同意 | 重跑同一条命令 |
-| ③ 下载到本地 | `git clone …` 后 `dsh plugin --profile web add <本地路径>` | 无 | `git pull` + 重启（**不需要**重新构建） |
+| 路 | 命令 | 适合谁 | 需要什么 | 更新方式 |
+|---|---|---|---|---|
+| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | 绝大多数人：只是想用它 | 无（包内已带全部产物） | `dsh plugin --profile web up dsh-skill-mini-manager` |
+| ② GitHub 直装 | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | 想跟仓库最新提交，而不是发布版 | 本机有 `git`；若 DSH 要求构建审批就同意 | 重跑同一条命令 |
+| ③ 下载到本地 | `dsh plugin --profile web add <本地目录>` | 要读/改代码、要离线、或本机**没有 git** | 无（`git clone` 或 **Download ZIP** 都行） | 重新 `git pull` / 重新下载 |
+
+一句话：**能装 npm 就装 npm**（一条命令、不依赖 `git`）；要跟最新提交走 ②；要动代码或没有 `git` 走 ③。
 
 ### ① 从 npm 装（推荐）
 
@@ -119,7 +121,8 @@ DSH 的 skill 注册表是 **host + 按 scope 分层**的：部署级 provider �
 dsh plugin --profile web add dsh-skill-mini-manager
 ```
 
-包内已带全部产物，不执行任何安装脚本，也不需要 `git`。这就是最快的一条路。
+包内已带全部产物，不执行任何安装脚本，也不需要 `git`——前置条件最少的一条路。
+发布历史见 <https://www.npmjs.com/package/dsh-skill-mini-manager>。
 
 ### ② 从 GitHub 直接装
 
@@ -127,18 +130,32 @@ dsh plugin --profile web add dsh-skill-mini-manager
 dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager
 ```
 
-需要本机有 `git`。仓库没有提交构建产物、也没有 `prepare` 脚本，所以通常不会触发构建审批；
-若 DSH 要求批准，按提示同意即可。更新就是重跑同一条命令。
+适合想直接跟 `main` 分支最新提交的情况（npm 上是发布版，两者之间可能有时间差）。
+需要本机有 `git`。仓库没有需要现场生成的构建产物、也没有 `prepare` 脚本，所以通常不会触发
+构建审批；若 DSH 要求批准，按提示同意即可。更新就是重跑同一条命令。
 
 ### ③ 下载到本地再装
 
+适合要读代码、改代码、离线使用，或者**本机根本没有 `git`** 的情况。两种下载方式都行：
+
 ```bash
+# 方式 A：git clone（需要 git）
 git clone https://github.com/runcat-tommy/dsh-skill-mini-manager.git
 dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ```
 
-适合要改代码或离线使用的情况。更新走 `git pull` 然后重启——本插件没有构建步骤，
-**不需要**跑 `npm run build`。
+```text
+# 方式 B：不用 git（Download ZIP）
+1. 打开 https://github.com/runcat-tommy/dsh-skill-mini-manager
+2. Code → Download ZIP
+3. 解压，然后：
+   dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager-main
+```
+
+⚠️ Download ZIP 解压出来的目录带 `-main` 后缀，`add` 要指向**解压后的那个目录**，
+不要指向 `.zip` 文件本身。
+
+更新走 `git pull`（或重新下载）然后重启——本插件没有构建步骤，**不需要**跑 `npm run build`。
 
 `dsh plugin` 是 `pnpm` 的转发壳：它会在 profile 目录里跑 `pnpm add`，然后按装载后的真实状态
 对齐 `dsh.profile.bundles`。所以也可以用 `pnpm add link:<路径>` 手工挂载，此时需要自己把包名

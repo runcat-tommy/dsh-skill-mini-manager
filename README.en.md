@@ -1,4 +1,4 @@
-﻿# dsh-skill-mini-manager · Skill Mini Manager
+# dsh-skill-mini-manager · Skill Mini Manager
 
 English | [中文](README.md)
 
@@ -122,11 +122,14 @@ Pick any one of three routes; **all three need one `dsh web` restart** afterward
 the repository**, and `package.json` declares no `prepare` script. So no route needs
 a build first, and a GitHub-source install does not normally trigger a build approval.
 
-| Route | Command | Needs | Updating |
-|---|---|---|---|
-| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | nothing (the tarball carries every artifact) | `dsh plugin --profile web up dsh-skill-mini-manager` |
-| ② GitHub source | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | `git` on the machine; approve the build if DSH asks | re-run the same command |
-| ③ Local checkout | `git clone …` then `dsh plugin --profile web add <path>` | nothing | `git pull` + restart (**no** rebuild) |
+| Route | Command | Best for | Needs | Updating |
+|---|---|---|---|---|
+| ① npm | `dsh plugin --profile web add dsh-skill-mini-manager` | almost everyone: you just want to use it | nothing (the tarball carries every artifact) | `dsh plugin --profile web up dsh-skill-mini-manager` |
+| ② GitHub source | `dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager` | tracking the newest commit rather than a release | `git` on the machine; approve the build if DSH asks | re-run the same command |
+| ③ Local download | `dsh plugin --profile web add <local dir>` | reading/editing the code, working offline, or **no git installed** | nothing (`git clone` or **Download ZIP**) | `git pull` / download again |
+
+In one line: **prefer npm** (one command, no `git`); use ② to track the newest commit;
+use ③ to change the code or when `git` is not available.
 
 ### ① From npm (recommended)
 
@@ -134,8 +137,9 @@ a build first, and a GitHub-source install does not normally trigger a build app
 dsh plugin --profile web add dsh-skill-mini-manager
 ```
 
-The tarball carries every artifact, runs no install script, and needs no `git`.
-This is the fastest route.
+The tarball carries every artifact, runs no install script, and needs no `git` — the
+fewest preconditions of the three. Release history:
+<https://www.npmjs.com/package/dsh-skill-mini-manager>.
 
 ### ② Straight from GitHub
 
@@ -143,19 +147,35 @@ This is the fastest route.
 dsh plugin --profile web add github:runcat-tommy/dsh-skill-mini-manager
 ```
 
-This needs `git` on the machine. The repository ships **no build artifacts to
-generate and no `prepare` script**, so a build approval is not normally triggered;
-approve it if DSH asks. Updating means re-running the same command.
+For tracking the newest commit on `main` directly (npm carries releases, so the two
+can differ in time). This needs `git` on the machine. The repository has no build
+artifacts to generate and no `prepare` script, so a build approval is not normally
+triggered; approve it if DSH asks. Updating means re-running the same command.
 
-### ③ From a local checkout
+### ③ Download it locally
+
+For reading or editing the code, working offline, or when **`git` is not installed at
+all**. Either download method works:
 
 ```bash
+# Option A: git clone (needs git)
 git clone https://github.com/runcat-tommy/dsh-skill-mini-manager.git
 dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager
 ```
 
-For editing the code or working offline. Update with `git pull` and a restart —
-there is **no** `npm run build` step to run, because the plugin has nothing to build.
+```text
+# Option B: no git required (Download ZIP)
+1. Open https://github.com/runcat-tommy/dsh-skill-mini-manager
+2. Code -> Download ZIP
+3. Unzip, then:
+   dsh plugin --profile web add D:\path\to\dsh-skill-mini-manager-main
+```
+
+⚠️ The Download ZIP folder keeps a `-main` suffix, so point `add` at the **unzipped
+directory** — not at the `.zip` file itself.
+
+Update with `git pull` (or a fresh download) and a restart — there is **no**
+`npm run build` step to run, because the plugin has nothing to build.
 
 `dsh plugin` is a forwarding shell around `pnpm`: it runs `pnpm add` inside the
 profile directory, then realigns `dsh.profile.bundles` with what actually got
