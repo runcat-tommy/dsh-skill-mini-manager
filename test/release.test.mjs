@@ -152,7 +152,7 @@ test('no lifecycle script that would force a build approval on the GitHub route'
 })
 
 test('the READMEs and LICENSE that npm renders are present and shipped', () => {
-  for (const file of ['README.md', 'README.en.md', 'LICENSE', 'CHANGELOG.md']) {
+  for (const file of ['README.md', 'README.en.md', 'LICENSE', 'CHANGELOG.md', 'CHANGELOG.en.md']) {
     assert.equal(existsSync(join(pluginRoot, file)), true, `${file} is missing`)
     assert.equal(manifest.files.includes(file), true, `${file} is not in package.json "files"`)
   }
@@ -161,6 +161,30 @@ test('the READMEs and LICENSE that npm renders are present and shipped', () => {
   for (const entry of ['assets', 'screenshots.json']) {
     assert.equal(manifest.files.includes(entry), true, `${entry} must ship for the README image to resolve`)
   }
+})
+
+test('the changelog is a dated, bilingual pair', () => {
+  // Every sibling plugin dates its entries, and 4 of 5 ship an English CHANGELOG
+  // next to the Chinese one. A CHANGELOG with no dates is not checkable against
+  // git history, which is most of the point of keeping one.
+  const zh = read('CHANGELOG.md')
+  const en = read('CHANGELOG.en.md')
+
+  for (const version of ['1.0.0', '1.0.1', '2.0.1', '2.0.2']) {
+    const escaped = version.replace(/\./g, '\\.')
+    assert.match(
+      zh,
+      new RegExp(`^## \\[${escaped}\\] - \\d{4}-\\d{2}-\\d{2}$`, 'm'),
+      `CHANGELOG.md entry ${version} must be dated as "## [${version}] - YYYY-MM-DD"`,
+    )
+    assert.match(
+      en,
+      new RegExp(`^## \\[${escaped}\\] - \\d{4}-\\d{2}-\\d{2}$`, 'm'),
+      `CHANGELOG.en.md entry ${version} must carry the same dated heading`,
+    )
+  }
+  // Newest first, and the English file must lead with the newest entry.
+  assert.match(en, /^## \[2\.0\.2\] - \d{4}-\d{2}-\d{2}$/m)
 })
 
 test('the marketplace declaration uses the documented four-field shape', () => {
