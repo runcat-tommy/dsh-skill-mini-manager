@@ -170,7 +170,7 @@ test('the changelog is a dated, bilingual pair', () => {
   const zh = read('CHANGELOG.md')
   const en = read('CHANGELOG.en.md')
 
-  for (const version of ['1.0.0', '1.0.1', '2.0.1', '2.0.2']) {
+  for (const version of ['1.0.0', '1.0.1', '2.0.1', '2.0.2', '2.0.3']) {
     const escaped = version.replace(/\./g, '\\.')
     assert.match(
       zh,

@@ -1,4 +1,23 @@
-﻿# CHANGELOG
+# CHANGELOG
+
+## [2.0.3] - 2026-10-16
+
+### 修复
+
+- **补上宿主版本要求（peer 声明）**：本包此前没有 `peerDependencies`，社区市场只能把它判为 `unknown`。市场只认三类声明——`engines.dsh`，以及 `peerDependencies` 里既在**宿主包清单**内、又匹配 `@deepseek-ai/dsh*` 的项（`dshmarket/lib/discovery-compatibility.js` 的 `deriveHostCompatibility`）；一条都没有，插件就无法声明「我支持 0.2.x」。
+  - 现补 3 条，正是 `dsh.client.inject` 已声明的三个包：`@deepseek-ai/dsh-client-runtime` / `dsh-client-locale` / `dsh-client-ui-settings`，范围统一为 **`^0.1.0-rc.6 || ^0.2.0-rc.1`**。
+  - 为什么是两段式：只写 `^0.2.0-rc.1` 会把仍在 0.1.x 宿主上的用户判成 `incompatible`；两段式同时覆盖 `0.1.0-rc.6` / `0.1.0-rc.8` / `0.1.1-rc.2` / `0.2.0-rc.2` / `0.2.1-alpha.4`。**日后两条线若不可兼得，以 0.2.x 为准，放弃 0.1.x。**
+
+### 说明
+
+- `lib/` 只有 `VERSION` 常量跟着版本号走（`2.0.2` → `2.0.3`），运行逻辑与 2.0.2 相同。
+- `test/release.test.mjs` 的「CHANGELOG 日期成对」用例把 `2.0.3` 加进版本清单，本次两文件都必须带日期条目。
+- 实测证据（宿主 `0.2.0-rc.2`，验收工具为仓库外的 `verify-compat.mjs`，判定直接复用 dshmarket 自己的函数）：改前 `unknown` → 改后 `compatible`；`profiles/web` 体检本插件无 peer 警告；64 项单测全绿。
+
+### 发布
+
+- npm：`dsh-skill-mini-manager@2.0.3`
+- GitHub：https://github.com/runcat-tommy/dsh-skill-mini-manager
 
 ## [2.0.2] - 2026-10-13
 

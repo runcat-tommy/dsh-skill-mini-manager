@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [2.0.3] - 2026-10-16
+
+### Fixed
+
+- **The package declared no host requirement at all, so the marketplace could only read it as `unknown`**: there were no `peerDependencies`, and the market's verdict only considers three kinds of declaration — `engines.dsh`, plus any `peerDependencies` entry that is both in the **host package inventory** and matches `@deepseek-ai/dsh*` (`deriveHostCompatibility` in `dshmarket/lib/discovery-compatibility.js`). With none of them, the plugin cannot say "I support 0.2.x".
+  - Added 3 host peers — exactly the packages `dsh.client.inject` already lists: `@deepseek-ai/dsh-client-runtime` / `dsh-client-locale` / `dsh-client-ui-settings`, all ranged **`^0.1.0-rc.6 || ^0.2.0-rc.1`**.
+  - Why two segments instead of `^0.2.0-rc.1` alone: declaring only 0.2.x would mark users still on a 0.1.x host as `incompatible`. The two-segment range covers `0.1.0-rc.6` / `0.1.0-rc.8` / `0.1.1-rc.2` / `0.2.0-rc.2` / `0.2.1-alpha.4`. **If the two lines ever cannot coexist, 0.2.x wins and 0.1.x is dropped.**
+
+### Notes
+
+- `lib/` changes only in its `VERSION` constant (`2.0.2` → `2.0.3`); runtime logic is identical to 2.0.2.
+- The "dated, bilingual changelog pair" case in `test/release.test.mjs` now includes `2.0.3`, so both files must carry a dated entry.
+- Evidence (host `0.2.0-rc.2`, using an out-of-tree `verify-compat.mjs` that calls dshmarket's own functions): `unknown` → `compatible`; the `profiles/web` health check reports no peer warning; all 64 tests pass.
+
+### Release
+
+- npm: `dsh-skill-mini-manager@2.0.3`
+- GitHub: https://github.com/runcat-tommy/dsh-skill-mini-manager
+
 ## [2.0.2] - 2026-10-13
 
 **A documentation-only release**, whose sole purpose is to sync the install
