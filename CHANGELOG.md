@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [2.0.3] - 2026-10-16
+## [2.0.4] - 2026-10-16
 
 ### 修复
 
@@ -9,17 +9,37 @@
   而它**不是改名**：返回的是一个**租约**（`{ key } & AsyncDisposable`），读完该 scope
   必须 `dispose`，否则那份预设修订会被 `retain` 一直留在内存里。1.0.1 用的是旧名字，
   于是在 0.2 宿主（含桌面端 0.2.0-rc.2）上**每个预设都抛**
-  `presets.standingKeyFor is not a function`，页面上 4 个预设全部报错、一个 skill 都列不出来。
+  `presets.standingKeyFor is not a function`，页面上 4 个预设全部报错、这些预设的 skill 一个都列不出来。
   - 现在两代 API 都支持：有 `acquireScope` 就用它并**在 `finally` 里释放租约**（读取抛错也释放），
     只有 `standingKeyFor` 的 0.1.x 宿主走旧路径（无需释放）；两者都没有时给出**点名两者的**明确报错，
     而不是抛 `undefined is not a function`。
-  - 这正是本次 peer 声明所承诺的范围 `^0.1.0-rc.6 || ^0.2.0-rc.1`：**声明了 0.2.x 就得真的能在 0.2.x 上跑。**
+  - 这补上了 2.0.3 的漏洞：2.0.3 声明了范围 `^0.1.0-rc.6 || ^0.2.0-rc.1`，**但当时在 0.2.x 上其实跑不起来**——
+    「声明支持」和「真的能跑」是两件事，2.0.3 只做到了前者。
   - 教训：**这个 bug 是测试放过去的**——`test/host.test.mjs` 的假 roster 只实现了旧方法，
-    所以 64 项测试全绿而真机全红。本次补了 5 个用例：0.2 路径能读出预设层、租约在读完/抛错时都被释放、
-    两代同时存在时优先 0.2、两代都没有时报错可读、0.1 旧路径仍可用。
+    所以当时 64 项测试全绿而真机全红。本次补了 6 个用例：0.2 路径能读出预设层、租约在读完/抛错时都被释放、
+    两代同时存在时优先 0.2、两代都没有时报错可读、0.1 旧路径仍可用，以及**默认假 roster 改为 0.2 形状**
+    （这样默认测试路径就跑在当前宿主真正提供的 API 上，而不是一个早已不存在的方法上）。
+
+### 说明
+
+- `lib/index.js` 改动：新增 `acquireView` / `releaseView` / `withViewSlots`，`viewSlots` 改为返回
+  「slots + release」，`catalog` 与 `resolveEverywhere` 两个调用点改为在租约内读取。
+  `lib/client.js` 与 `lib/catalog.js` 未改。
+
+### 发布
+
+- npm：`dsh-skill-mini-manager@2.0.4`
+- GitHub：https://github.com/runcat-tommy/dsh-skill-mini-manager
+
+## [2.0.3] - 2026-10-16
+
+### 修复
+
 - **补上宿主版本要求（peer 声明）**：本包此前没有 `peerDependencies`，社区市场只能把它判为 `unknown`。市场只认三类声明——`engines.dsh`，以及 `peerDependencies` 里既在**宿主包清单**内、又匹配 `@deepseek-ai/dsh*` 的项（`dshmarket/lib/discovery-compatibility.js` 的 `deriveHostCompatibility`）；一条都没有，插件就无法声明「我支持 0.2.x」。
   - 现补 3 条，正是 `dsh.client.inject` 已声明的三个包：`@deepseek-ai/dsh-client-runtime` / `dsh-client-locale` / `dsh-client-ui-settings`，范围统一为 **`^0.1.0-rc.6 || ^0.2.0-rc.1`**。
   - 为什么是两段式：只写 `^0.2.0-rc.1` 会把仍在 0.1.x 宿主上的用户判成 `incompatible`；两段式同时覆盖 `0.1.0-rc.6` / `0.1.0-rc.8` / `0.1.1-rc.2` / `0.2.0-rc.2` / `0.2.1-alpha.4`。**日后两条线若不可兼得，以 0.2.x 为准，放弃 0.1.x。**
+  - ⚠️ **版本本身有漏洞（已由 2.0.4 修复）**：本条只加了声明，**运行逻辑确实与 2.0.2 相同**，
+    而 2.0.2 在 0.2 宿主上跑不起来（见 2.0.4）。所以 2.0.3 的 peer 声明当时是**空头承诺**。
   - ⚠️ **实测补充（2026-10-16，直接跑 dshmarket 自己的 `corePackageNames` + `deriveHostCompatibility`）**：判定**随部署布局而变**，因为市场只统计「宿主 `node_modules/@deepseek-ai` 下、名字以 `dsh`/`cordis` 开头的目录」。
     - **桌面端**：宿主装包在 `app.asar` 里（`dsh/node_modules/@deepseek-ai/*`），清单 285 个名字 → `dsh-client-locale` 与 `dsh-client-ui-settings` **在列**，`dsh-client-runtime` **不在**（它只以 `@deepseek-ai/.dsh-5pHextoZ/…` 这种暂存形态存在于 CLI 安装里）→ **计 2 条，判 `compatible`**。
     - **CLI 安装**：包被嵌套在 `dsh/node_modules/` 下，宿主 `@deepseek-ai` 根目录里只有 `dsh` 一个目录 → 三条 peer **一条都不计**，仍是 `unknown`。所以 CLI 用户看到 `unknown` 属正常，**别据此以为坏了**。
@@ -27,16 +47,13 @@
 
 ### 说明
 
-- `lib/index.js` 除 `VERSION` 外**另有实质改动**（见上：`acquireView` / `releaseView` / `withViewSlots`，
-  以及两个调用点改为在租约内读取）。`lib/client.js` 与 `lib/catalog.js` 未改。
+- `lib/` 只有 `VERSION` 常量跟着版本号走（`2.0.2` → `2.0.3`），运行逻辑与 2.0.2 相同。
 - `test/release.test.mjs` 的「CHANGELOG 日期成对」用例把 `2.0.3` 加进版本清单，本次两文件都必须带日期条目。
-- 实测证据：宿主 `0.2.0-rc.2`（桌面端与 CLI 一致）。① 真机方法面：`dsh-agent-preset-registry`
-  的 prototype 上 `acquireScope` 是 function、`standingKeyFor` 是 `undefined`，本插件现在走 0.2 分支；
-  ② peer 判定用 dshmarket 自己的函数跑出 `unknown` → `compatible`（桌面布局）；③ **69 项单测全绿**。
+- 实测证据（宿主 `0.2.0-rc.2`）：peer 判定用 dshmarket 自己的函数跑出 `unknown` → `compatible`（桌面布局）；64 项单测全绿。
 
 ### 发布
 
-- npm：`dsh-skill-mini-manager@2.0.3`
+- npm：`dsh-skill-mini-manager@2.0.3`（2026-10-16T03:50:32Z）
 - GitHub：https://github.com/runcat-tommy/dsh-skill-mini-manager
 
 ## [2.0.2] - 2026-10-13
