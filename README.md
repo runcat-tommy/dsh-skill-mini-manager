@@ -1,4 +1,4 @@
-﻿# dsh-skill-mini-manager · skill 极简管理
+# dsh-skill-mini-manager · skill 极简管理
 
 [English](README.en.md) | 中文
 
@@ -40,10 +40,15 @@ DSH 的 skill 注册表是 **host + 按 scope 分层**的：部署级 provider �
 「presets own local discovery」），所以**全局层在标准 web profile 上是空的**，
 所有用户 skill 都活在预设层里——只读全局层会得到一份空目录。
 
-因此本插件**逐个读取**：全局层 + roster 里每个预设的层，然后按名称合并。预设的读取用
-`AgentPresets.standingKeyFor(id)` 取该预设的 standing scope key，这正是 DSH 为
-「没有 agent 的宿主读取者」提供的读取 scope。读不通的预设会**明确报在页面上**，
-而不是静默少列几个 skill。
+因此本插件**逐个读取**：全局层 + roster 里每个预设的层，然后按名称合并。预设的读取走 DSH
+为「没有 agent 的宿主读取者」提供的读取 scope，**两代 API 都兼容**：
+
+- **DSH 0.2 起**：`acquireScope(id)`，返回一个**租约**（`{ key } & AsyncDisposable`），
+  读完该 scope 后必须 `dispose`，否则那份预设修订会被一直留在内存里。本插件在
+  `finally` 里释放，读取抛错也照样释放。
+- **DSH 0.1.x**：`standingKeyFor(id)`，直接返回 key，没有东西需要释放。
+
+读不通的预设会**明确报在页面上**，而不是静默少列几个 skill。
 
 于是每个 skill 会标出它被**哪些预设提供**（例如 `提供给 预设 standard · 预设 code`）；
 预设自带 `skills/` 目录里的私有 skill（例如内置 `cordis` 预设的两个）只标它自己。
@@ -192,7 +197,7 @@ dsh plugin --profile web remove dsh-skill-mini-manager
 | `lib/index.js` | 宿主半侧：四条 HTTP 路由、回收站、全部拒绝规则 |
 | `lib/catalog.js` | 纯函数核心：根目录解析、`planRemoval`、回收站命名校验 |
 | `lib/client.js` | 浏览器半侧：手写的 `__ModuleLoader__` bundle，注册 `settings.section` |
-| `test/` | 64 个测试：纯规则、宿主半侧（真实临时目录 + 分层读取）、浏览器半侧结构、发布产物门槛 |
+| `test/` | 70 个测试：纯规则、宿主半侧（真实临时目录 + 分层读取）、浏览器半侧结构、发布产物门槛 |
 | `scripts/inspect-live-catalog.mjs` | 只读探针：用本机已装的 skill 跑一遍目录读取与移除规划 |
 
 浏览器半侧不需要构建步骤：它只 `require("react")` 这一颗平台种子，其余全部用
@@ -201,7 +206,7 @@ dsh plugin --profile web remove dsh-skill-mini-manager
 ## 开发
 
 ```bash
-node --test "test/*.test.mjs"          # 全部 64 个测试
+node --test "test/*.test.mjs"          # 全部 70 个测试
 node scripts/inspect-live-catalog.mjs  # 用本机真实 skill 做只读验证
 ```
 

@@ -96,17 +96,49 @@ function fakeRegistry(layers) {
 }
 
 /**
- * A stand-in for the `agentPresets` roster service.
- * @param keys - preset id to the standing scope key the registry views by.
+ * A stand-in for the `agentPresets` roster service, modelling the CURRENT host.
+ *
+ * It deliberately exposes the 0.2 `acquireScope` shape rather than the 0.1
+ * `standingKeyFor` one. The earlier version of this fake implemented only the
+ * old method, which is exactly how a real 0.2 incompatibility shipped with 64
+ * green tests: every test exercised an API no current host has. The default
+ * fake must therefore look like the host users actually run, and the legacy
+ * shape gets its own explicit fake below.
+ *
+ * @param keys - preset id to the scope key the registry views by.
  * @param broken - preset ids discovery reports as unusable.
+ * @param leases - collects every lease handed out, so a test can assert disposal.
  */
-function fakePresets(keys, broken = []) {
+function fakePresets(keys, broken = [], leases = []) {
   return {
     async list() {
       return [
         ...Object.keys(keys).map((id) => ({ id })),
         ...broken.map((id) => ({ id, broken: 'composition file is unreadable' })),
       ]
+    },
+    async acquireScope(id) {
+      if (keys[id] === undefined) throw new Error(`preset "${id}" has no standing mount`)
+      const lease = {
+        key: keys[id],
+        async [Symbol.asyncDispose]() {
+          lease.disposed = true
+        },
+      }
+      leases.push(lease)
+      return lease
+    },
+  }
+}
+
+/**
+ * The same roster as the 0.1.x host exposed it: a bare key, nothing to dispose.
+ * @param keys - preset id to the standing scope key the registry views by.
+ */
+function fakeLegacyPresets(keys) {
+  return {
+    async list() {
+      return Object.keys(keys).map((id) => ({ id }))
     },
     async standingKeyFor(id) {
       if (keys[id] === undefined) throw new Error(`preset "${id}" has no standing mount`)
@@ -201,7 +233,11 @@ function mount(layers, home, options = {}) {
   const previous = process.env.DSH_HOME
   process.env.DSH_HOME = home
   try {
-    const { ctx, routes, logs } = fakeContext(fakeRegistry(layers), options)
+    const base = fakeRegistry(layers)
+    // `wrapRegistry` lets a test make a scoped read fail, which is the only way
+    // to observe that a scope lease is released on the error path too.
+    const registry = options.wrapRegistry === undefined ? base : options.wrapRegistry(base)
+    const { ctx, routes, logs } = fakeContext(registry, options)
     apply(ctx)
     return { routes, logs }
   } finally {
@@ -599,5 +635,157 @@ test('a deployment with no preset roster at all reads the global layer alone', a
   assert.equal(payload.skills.length, 1)
   assert.deepEqual(payload.skills[0].scopes, ['global'])
   assert.deepEqual(payload.scopes, [{ id: 'global', presetId: null, skills: 1, unavailable: null }])
+})
+
+/* ── DSH 0.2 replaced `standingKeyFor(id)` with `acquireScope(id)` ─────────────
+ * 0.2 removed the old name outright and made the new one a *lease*: it returns
+ * `{ key } & AsyncDisposable`, and the caller must dispose it once the scoped
+ * read is done. This plugin first shipped against the old name, so on a 0.2 host
+ * (including the 0.2.0-rc.2 desktop app) every preset failed with
+ * "presets.standingKeyFor is not a function" and its skills went unlisted — while
+ * every test passed, because the fakes only ever defined the old method.
+ * These lock in both shapes and the lease lifecycle.
+ */
+
+test('a 0.2 host is read through acquireScope, and the lease is disposed after the read', async () => {
+  const box = sandbox()
+  const definition = writeBundleSkill(box.root, 'demo')
+  const events = []
+  const { routes } = mount({ global: [], standard: [definition] }, box.home, {
+    presets: {
+      async list() {
+        return [{ id: 'standard' }]
+      },
+      // The 0.2 shape only: no `standingKeyFor` anywhere.
+      async acquireScope(id) {
+        events.push(`acquire:${id}`)
+        return {
+          key: id,
+          async [Symbol.asyncDispose]() {
+            events.push(`dispose:${id}`)
+          },
+        }
+      },
+    },
+  })
+
+  const payload = (await call(routes.get(ENDPOINTS.catalog), 'GET')).json()
+  assert.equal(payload.ok, true)
+  assert.equal(payload.skills.length, 1, 'the preset layer must be readable through acquireScope')
+  assert.deepEqual(payload.skills[0].scopes, ['preset:standard'])
+  assert.equal(payload.scopes.find((scope) => scope.id === 'preset:standard').unavailable, null)
+  // Acquired before the read, released exactly once afterwards — never stranded.
+  assert.deepEqual(events, ['acquire:standard', 'dispose:standard'])
+})
+
+test('a scope lease is released even when the scoped read throws', async () => {
+  const box = sandbox()
+  const events = []
+  const { routes } = mount({ global: [] }, box.home, {
+    wrapRegistry: (registry) => ({
+      ...registry,
+      async snapshot(options) {
+        if (options?.scope === 'standard') throw new Error('scope read exploded')
+        return registry.snapshot(options)
+      },
+    }),
+    presets: {
+      async list() {
+        return [{ id: 'standard' }]
+      },
+      async acquireScope(id) {
+        events.push(`acquire:${id}`)
+        return {
+          key: id,
+          async [Symbol.asyncDispose]() {
+            events.push(`dispose:${id}`)
+          },
+        }
+      },
+    },
+  })
+
+  const payload = (await call(routes.get(ENDPOINTS.catalog), 'GET')).json()
+  assert.equal(payload.ok, true)
+  const failed = payload.scopes.find((scope) => scope.id === 'preset:standard')
+  assert.equal(failed.skills, 0)
+  assert.equal(failed.unavailable, 'scope read exploded')
+  assert.deepEqual(events, ['acquire:standard', 'dispose:standard'])
+})
+
+test('acquireScope wins on a host that offers both, and a plain dispose() is honoured', async () => {
+  const box = sandbox()
+  const definition = writeBundleSkill(box.root, 'demo')
+  const called = []
+  const { routes } = mount({ global: [], standard: [definition] }, box.home, {
+    presets: {
+      async list() {
+        return [{ id: 'standard' }]
+      },
+      async acquireScope(id) {
+        called.push('acquireScope')
+        // The other allowed disposer shape: a plain `dispose()` method.
+        return { key: id, dispose() { called.push('dispose') } }
+      },
+      async standingKeyFor() {
+        called.push('standingKeyFor')
+        return 'standard'
+      },
+    },
+  })
+
+  const payload = (await call(routes.get(ENDPOINTS.catalog), 'GET')).json()
+  assert.equal(payload.skills.length, 1)
+  assert.deepEqual(called, ['acquireScope', 'dispose'], 'the 0.2 API must be preferred')
+})
+
+test('a registry exposing neither scope API reports it instead of listing nothing', async () => {
+  const box = sandbox()
+  const definition = writeBundleSkill(box.root, 'demo')
+  const { routes } = mount({ global: [], standard: [definition] }, box.home, {
+    presets: {
+      async list() {
+        return [{ id: 'standard' }]
+      },
+      // Neither method: what an unforeseen third version would look like.
+    },
+  })
+
+  const payload = (await call(routes.get(ENDPOINTS.catalog), 'GET')).json()
+  assert.equal(payload.ok, true)
+  const failed = payload.scopes.find((scope) => scope.id === 'preset:standard')
+  assert.match(failed.unavailable, /acquireScope/)
+  assert.match(failed.unavailable, /standingKeyFor/)
+  assert.equal(payload.complete, true, 'an unusable preset alone does not make the read incomplete')
+})
+
+test('a legacy 0.1 host still works through standingKeyFor', async () => {
+  const box = sandbox()
+  const definition = writeBundleSkill(box.root, 'demo')
+  const { routes } = mount({ global: [], standard: [definition] }, box.home, {
+    presets: fakeLegacyPresets({ standard: 'standard' }),
+  })
+
+  const payload = (await call(routes.get(ENDPOINTS.catalog), 'GET')).json()
+  assert.equal(payload.skills.length, 1)
+  assert.deepEqual(payload.skills[0].scopes, ['preset:standard'])
+  assert.equal(payload.scopes.find((scope) => scope.id === 'preset:standard').unavailable, null)
+})
+
+test('every lease the default 0.2 fake hands out is disposed by the time a read settles', async () => {
+  const box = sandbox()
+  const definition = writeBundleSkill(box.root, 'demo')
+  const leases = []
+  const { routes } = mount({ global: [], a: [definition], b: [] }, box.home, {
+    presets: fakePresets({ a: 'a', b: 'b' }, [], leases),
+  })
+
+  await call(routes.get(ENDPOINTS.catalog), 'GET')
+  // The catalog and the removal re-resolution are separate reads, so this also
+  // pins that a lease is not reused across them or leaked between requests.
+  await call(routes.get(ENDPOINTS.remove), 'POST', { name: 'demo' })
+
+  assert.equal(leases.length, 4, 'two presets, two reads')
+  assert.deepEqual(leases.map((lease) => lease.disposed), [true, true, true, true])
 })
 

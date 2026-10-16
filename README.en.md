@@ -1,4 +1,4 @@
-﻿# dsh-skill-mini-manager · Skill Mini Manager
+# dsh-skill-mini-manager · Skill Mini Manager
 
 English | [中文](README.md)
 
@@ -45,10 +45,18 @@ every user skill lives in a preset layer — reading the global layer alone yiel
 an empty catalog.
 
 So this plugin reads **every view**: the global layer plus each preset in the
-roster, merged by name. A preset is read through the standing scope key from
-`AgentPresets.standingKeyFor(id)` — the scope DSH documents for a host reader
-with no agent. A preset that cannot be read is **reported on the page** rather
-than silently costing you rows.
+roster, merged by name. A preset is read through the scope DSH provides for a
+host reader with no agent, and **both API generations are supported**:
+
+- **DSH 0.2 and later**: `acquireScope(id)`, which returns a *lease*
+  (`{ key } & AsyncDisposable`). It must be disposed once the scoped read is
+  done, or that preset revision is retained in memory; this plugin releases it in
+  a `finally`, including when the read throws.
+- **DSH 0.1.x**: `standingKeyFor(id)`, which returns the key directly and has
+  nothing to release.
+
+A preset that cannot be read is **reported on the page** rather than silently
+costing you rows.
 
 Each skill therefore names the presets that **serve it** (e.g.
 `served to preset standard · preset code`), and a skill from a preset-private
@@ -215,7 +223,7 @@ dependencies.)
 | `lib/index.js` | host half: the four routes, the trash, every refusal rule |
 | `lib/catalog.js` | the pure core: home/root resolution, `planRemoval`, trash-name validation |
 | `lib/client.js` | browser half: a hand-written `__ModuleLoader__` bundle registering the `settings.section` |
-| `test/` | 64 tests: pure rules, host half over real temp directories (including the layered read), browser-half structure, release-artifact gates |
+| `test/` | 70 tests: pure rules, host half over real temp directories (including the layered read), browser-half structure, release-artifact gates |
 | `scripts/inspect-live-catalog.mjs` | read-only probe: run the catalog and removal planning over the skills actually installed here |
 
 The browser half needs no build step: it requires only the `react` platform seed
@@ -225,7 +233,7 @@ bilingually through the `locale` service and follows the DSH UI language.
 ## Developing
 
 ```bash
-node --test "test/*.test.mjs"          # all 64 tests
+node --test "test/*.test.mjs"          # all 70 tests
 node scripts/inspect-live-catalog.mjs  # read-only check against the real installed skills
 ```
 

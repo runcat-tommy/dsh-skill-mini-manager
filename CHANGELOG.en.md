@@ -4,15 +4,46 @@
 
 ### Fixed
 
+- **Fixed "not one preset's skills can be read" — DSH 0.2 replaced the method that reads a scope.**
+  From 0.2 on, `AgentPresets.standingKeyFor(id)` is **gone outright**, replaced by
+  `acquireScope(id)` — and that is not a rename: it returns a **lease**
+  (`{ key } & AsyncDisposable`) which must be disposed once the scoped read is done,
+  or that preset revision stays `retain`ed in memory. 1.0.1 called the old name, so on
+  a 0.2 host (including the 0.2.0-rc.2 Desktop app) **every preset threw**
+  `presets.standingKeyFor is not a function`: all four presets were reported as failed
+  and not a single skill was listed.
+  - Both API generations are now supported: `acquireScope` is preferred and its lease is
+    **released in a `finally`** (so a throwing read releases it too); a 0.1.x host with
+    only `standingKeyFor` takes the old path, which has nothing to release; a registry
+    exposing neither gets an error that **names both methods** instead of
+    `undefined is not a function`.
+  - This is exactly the range the peer declaration promises, `^0.1.0-rc.6 || ^0.2.0-rc.1`:
+    **declaring 0.2.x support means it has to actually run on 0.2.x.**
+  - The lesson: **the tests let this through.** The fake roster in `test/host.test.mjs`
+    only ever implemented the old method, so all 64 tests passed while every real host
+    failed. Five cases were added: the 0.2 path can read a preset layer; the lease is
+    released both after a completed read and after a throwing one; the 0.2 API wins when
+    both exist; a registry with neither reports a readable error; the legacy 0.1 path
+    still works.
 - **The package declared no host requirement at all, so the marketplace could only read it as `unknown`**: there were no `peerDependencies`, and the market's verdict only considers three kinds of declaration — `engines.dsh`, plus any `peerDependencies` entry that is both in the **host package inventory** and matches `@deepseek-ai/dsh*` (`deriveHostCompatibility` in `dshmarket/lib/discovery-compatibility.js`). With none of them, the plugin cannot say "I support 0.2.x".
   - Added 3 host peers — exactly the packages `dsh.client.inject` already lists: `@deepseek-ai/dsh-client-runtime` / `dsh-client-locale` / `dsh-client-ui-settings`, all ranged **`^0.1.0-rc.6 || ^0.2.0-rc.1`**.
   - Why two segments instead of `^0.2.0-rc.1` alone: declaring only 0.2.x would mark users still on a 0.1.x host as `incompatible`. The two-segment range covers `0.1.0-rc.6` / `0.1.0-rc.8` / `0.1.1-rc.2` / `0.2.0-rc.2` / `0.2.1-alpha.4`. **If the two lines ever cannot coexist, 0.2.x wins and 0.1.x is dropped.**
+  - ⚠️ **Measured (2026-10-16, running dshmarket's own `corePackageNames` + `deriveHostCompatibility`)**: the verdict **depends on the deployment layout**, because the market counts only directories under the host's `node_modules/@deepseek-ai` whose name starts with `dsh`/`cordis`.
+    - **Desktop**: the host packs its packages inside `app.asar` (`dsh/node_modules/@deepseek-ai/*`), inventory 285 names → `dsh-client-locale` and `dsh-client-ui-settings` are **in**, `dsh-client-runtime` is **not** (it exists only as a staged `@deepseek-ai/.dsh-5pHextoZ/…` directory in a CLI install) → **2 declarations count, verdict `compatible`**.
+    - **CLI install**: packages are nested under `dsh/node_modules/`, so the host's `@deepseek-ai` root holds only the `dsh` directory → **none of the three peers counts** and the verdict stays `unknown`. So a CLI user seeing `unknown` is expected — **do not read it as breakage**.
+    - `dsh-client-runtime` counts under **neither** layout, so it is a redundant declaration (all three exist on npm, so it causes no install error).
 
 ### Notes
 
-- `lib/` changes only in its `VERSION` constant (`2.0.2` → `2.0.3`); runtime logic is identical to 2.0.2.
+- `lib/index.js` **does change beyond `VERSION`** this time (see above: `acquireView` /
+  `releaseView` / `withViewSlots`, and two call sites now read inside the lease).
+  `lib/client.js` and `lib/catalog.js` are untouched.
 - The "dated, bilingual changelog pair" case in `test/release.test.mjs` now includes `2.0.3`, so both files must carry a dated entry.
-- Evidence (host `0.2.0-rc.2`, using an out-of-tree `verify-compat.mjs` that calls dshmarket's own functions): `unknown` → `compatible`; the `profiles/web` health check reports no peer warning; all 64 tests pass.
+- Evidence: host `0.2.0-rc.2` (Desktop and CLI agree). ① Real method surface: on the
+  `dsh-agent-preset-registry` prototype `acquireScope` is a function and `standingKeyFor`
+  is `undefined`, and the plugin now takes the 0.2 branch. ② The peer verdict, run through
+  dshmarket's own functions, goes `unknown` → `compatible` (Desktop layout). ③ **All 69
+  tests pass.**
 
 ### Release
 
